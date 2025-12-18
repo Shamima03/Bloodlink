@@ -19,13 +19,13 @@ export const createRequest = async (req, res) => {
 // Get My Requests
 // ----------------------------
 export const getMyRequests = async (req, res) => {
-    try {
-        // const requests = await BloodRequest.find({ user: req.user.id });
-        const requests = await BloodRequest.find({ user: req.user.id }).sort({ createdAt: -1 });
-        res.json(requests);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const requests = await BloodRequest.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const normalized = requests.map(r => ({ ...r._doc, id: r._id }));
+    res.json(normalized);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // ----------------------------
@@ -73,16 +73,15 @@ export const deleteRequest = async (req, res) => {
 // Get All Other Users’ Requests
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
-    try {
-        const requests = await BloodRequest.find({ user: { $ne: req.user.id } })
-                                           .populate("user", "name");
-
-        res.json(requests);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const requests = await BloodRequest.find({ user: { $ne: req.user.id } })
+                                       .populate("user", "name");
+    const normalized = requests.map(r => ({ ...r._doc, id: r._id }));
+    res.json(normalized);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
-
 // ----------------------------
 // Click Interest Icon
 // ----------------------------
