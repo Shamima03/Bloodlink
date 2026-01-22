@@ -88,24 +88,30 @@ export const getOtherRequests = async (req, res) => {
 // Toggle Request Visibility
 // ----------------------------
 export const toggleVisibility = async (req, res) => {
-    try {
-        const { isHidden } = req.body;
+  try {
+    const { isHidden } = req.body;
 
-        const request = await BloodRequest.findOne({
-            _id: req.params.id,
-            user: req.user.id, // owner only
-        });
+    // Find the request owned by this user
+    const request = await BloodRequest.findOne({
+      _id: req.params.id,
+      user: req.user.id, // owner only
+    });
 
-        if (!request)
-            return res.status(404).json({ message: "Request not found or unauthorized" });
-
-        request.isHidden = isHidden;
-        await request.save();
-
-        res.json({ message: "Visibility updated", request });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (!request) {
+      return res
+        .status(404)
+        .json({ message: "Request not found or unauthorized" });
     }
+
+    // Update visibility
+    request.isHidden = isHidden;
+    await request.save();
+
+    // ✅ Return the updated request directly
+    res.json(request);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 
