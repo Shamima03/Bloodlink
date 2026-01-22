@@ -74,14 +74,40 @@ export const deleteRequest = async (req, res) => {
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
     try {
-        const requests = await BloodRequest.find({ user: { $ne: req.user.id } })
-                                           .populate("user", "name");
+        const requests = await BloodRequest.find({
+            user: { $ne: req.user.id },
+            isHidden: false, // 🔥 IMPORTANT
+        }).populate("user", "name");
 
         res.json(requests);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
+// ----------------------------
+// Toggle Request Visibility
+// ----------------------------
+export const toggleVisibility = async (req, res) => {
+    try {
+        const { isHidden } = req.body;
+
+        const request = await BloodRequest.findOne({
+            _id: req.params.id,
+            user: req.user.id, // owner only
+        });
+
+        if (!request)
+            return res.status(404).json({ message: "Request not found or unauthorized" });
+
+        request.isHidden = isHidden;
+        await request.save();
+
+        res.json({ message: "Visibility updated", request });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 
 // ----------------------------
 // Click Interest Icon

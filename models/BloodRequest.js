@@ -2,7 +2,11 @@ import mongoose from "mongoose";
 
 const bloodRequestSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, 
+    user: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User", 
+      required: true 
+    }, 
 
     patientName: { type: String, required: true },
     hospital: { type: String, required: true },
@@ -13,9 +17,16 @@ const bloodRequestSchema = new mongoose.Schema(
       required: true,
       enum: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"],
     },
+
     units: { type: Number, required: true },
     contact: { type: String, required: true },
     deadline: { type: Date, required: true },
+
+    // 🔹 NEW FIELD (IMPORTANT)
+    isHidden: {
+      type: Boolean,
+      default: false,
+    },
 
     // Users who clicked interest icon
     interests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

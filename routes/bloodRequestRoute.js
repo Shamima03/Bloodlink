@@ -6,7 +6,8 @@ import {
     updateRequest,
     deleteRequest,
     getOtherRequests,
-    markInterest
+    markInterest,
+    toggleVisibility   
 } from "../controller/bloodRequestController.js";
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.delete("/:id", auth, deleteRequest);
 
 router.get("/others", auth, getOtherRequests);
 router.post("/interest/:id", auth, markInterest);
+router.put("/:id/visibility", authMiddleware, toggleVisibility);
 
 export default router;
