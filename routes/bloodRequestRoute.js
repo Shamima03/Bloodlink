@@ -19,6 +19,6 @@ router.delete("/:id", auth, deleteRequest);
 
 router.get("/others", auth, getOtherRequests);
 router.post("/interest/:id", auth, markInterest);
-router.put("/:id/visibility", authMiddleware, toggleVisibility);
+router.put("/:id/visibility", auth, toggleVisibility);
 
 export default router;
