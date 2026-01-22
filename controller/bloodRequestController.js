@@ -74,46 +74,14 @@ export const deleteRequest = async (req, res) => {
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
     try {
-        const requests = await BloodRequest.find({
-            user: { $ne: req.user.id },
-            isHidden: false, // 🔥 IMPORTANT
-        }).populate("user", "name");
+        const requests = await BloodRequest.find({ user: { $ne: req.user.id } })
+                                           .populate("user", "name");
 
         res.json(requests);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
-// ----------------------------
-// Toggle Request Visibility
-// ----------------------------
-export const toggleVisibility = async (req, res) => {
-  try {
-    const { isHidden } = req.body;
-
-    // Find the request owned by this user
-    const request = await BloodRequest.findOne({
-      _id: req.params.id,
-      user: req.user.id, // owner only
-    });
-
-    if (!request) {
-      return res
-        .status(404)
-        .json({ message: "Request not found or unauthorized" });
-    }
-
-    // Update visibility
-    request.isHidden = isHidden;
-    await request.save();
-
-    // ✅ Return the updated request directly
-    res.json(request);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
 
 // ----------------------------
 // Click Interest Icon
