@@ -9,6 +9,11 @@ import {
 } from "../controller/user.controller.js";
 const router = Router();
 
+const { savePushToken } = require("../controller/user.controller");
+const auth = require("../middleware/auth");
+
+router.post("/push-token", auth, savePushToken);
+
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/me", fetchLoginUser);

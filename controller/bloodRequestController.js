@@ -1,5 +1,9 @@
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
+const { Expo } = require("expo-server-sdk");
+const expo = new Expo();
+
+const User = require("../models/user.model");
 
 // ----------------------------
 // Create Blood Request
@@ -8,6 +12,26 @@ export const createRequest = async (req, res) => {
     try {
         const data = { ...req.body, user: req.user.id };
         const request = await BloodRequest.create(data);
+        // 🔔 Notify users in same city
+const users = await User.find({
+  city: req.body.location,
+  expoPushToken: { $ne: null },
+});
+
+const messages = users.map((user) => ({
+  to: user.expoPushToken,
+  sound: "default",
+  title: "🩸 Blood Needed Urgently",
+  body: `${req.body.bloodGroup} blood needed at ${req.body.hospital}`,
+  data: { requestId: request._id },
+}));
+
+const chunks = expo.chunkPushNotifications(messages);
+
+for (let chunk of chunks) {
+  await expo.sendPushNotificationsAsync(chunk);
+}
+
 
         res.status(201).json({ message: "Request created", request });
     } catch (err) {
@@ -77,9 +101,7 @@ export const deleteRequest = async (req, res) => {
     }
 };
 
-// ----------------------------
-// Get All Other Users’ Requests
-// ----------------------------
+
 // ----------------------------
 // Get All Other Users’ Requests
 // ----------------------------

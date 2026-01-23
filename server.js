@@ -43,6 +43,8 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+const notificationRoutes = require("./routes/notificationRoutes");
+app.use("/api", notificationRoutes);
 
 // routes declaration
 

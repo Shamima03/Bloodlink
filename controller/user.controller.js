@@ -226,6 +226,20 @@ const deleteUser = async (req, res) => {
     });
   }
 };
+exports.savePushToken = async (req, res) => {
+  try {
+    const { expoPushToken, city } = req.body;
+
+    await User.findByIdAndUpdate(req.user.id, {
+      expoPushToken,
+      city,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save push token" });
+  }
+};
 
 export {
   registerUser,
