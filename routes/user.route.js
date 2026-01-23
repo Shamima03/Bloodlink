@@ -9,14 +9,6 @@ import {
 } from "../controller/user.controller.js";
 const router = Router();
 
-import { savePushToken } from "../controller/user.controller.js";
-import auth from "../middleware/auth.js";
-
-router.post("/push-token", auth, savePushToken);
-
-
-router.post("/push-token", auth, savePushToken);
-
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/me", fetchLoginUser);
