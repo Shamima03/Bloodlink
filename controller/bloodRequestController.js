@@ -41,6 +41,7 @@ export const updateRequest = async (req, res) => {
     if (!request)
       return res.status(404).json({ message: "Request not found" });
 
+    // ❌ BLOCK EDIT IF COMPLETED (except isCompleted itself)
     if (request.isCompleted && !("isCompleted" in req.body)) {
       return res
         .status(400)
@@ -80,17 +81,16 @@ export const deleteRequest = async (req, res) => {
 // Get All Other Users’ Requests
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
-  try {
-    const requests = await BloodRequest.find({
-      isCompleted: false   // ✅ ONLY hide completed
-    })
-    .populate("user", "name")
-    .sort({ createdAt: -1 });
+    try {
+        const requests = await BloodRequest.find({ 
+            user: { $ne: req.user.id },  
+            isCompleted: false // ✅ only incomplete requests
+        }).populate("user", "name");
 
-    res.json(requests);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+        res.json(requests);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
 
 // ----------------------------

@@ -16,10 +16,7 @@ const bloodRequestSchema = new mongoose.Schema(
     units: { type: Number, required: true },
     contact: { type: String, required: true },
     deadline: { type: Date, required: true },
-    isCompleted: {
-      type: Boolean,
-      default: false
-    },
+    isCompleted: { type: Boolean, default: false },
 
     // Users who clicked interest icon
     interests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
