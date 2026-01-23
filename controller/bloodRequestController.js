@@ -32,23 +32,30 @@ export const getMyRequests = async (req, res) => {
 // Edit My Request
 // ----------------------------
 export const updateRequest = async (req, res) => {
-    try {
-        const request = await BloodRequest.findOne({ 
-            _id: req.params.id, 
-            user: req.user.id 
-        });
+  try {
+    const request = await BloodRequest.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
 
-        if (!request)
-            return res.status(404).json({ message: "Request not found or unauthorized" });
+    if (!request)
+      return res.status(404).json({ message: "Request not found" });
 
-        Object.assign(request, req.body);
-        await request.save();
-
-        res.json({ message: "Request updated", request });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (request.isCompleted && !("isCompleted" in req.body)) {
+      return res
+        .status(400)
+        .json({ message: "Completed requests cannot be edited" });
     }
+
+    Object.assign(request, req.body);
+    await request.save();
+
+    res.json({ message: "Request updated", request });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
+
 
 // ----------------------------
 // Delete My Request
@@ -74,7 +81,7 @@ export const deleteRequest = async (req, res) => {
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
     try {
-        const requests = await BloodRequest.find({ user: { $ne: req.user.id } })
+        const requests = await BloodRequest.find({ user: { $ne: req.user.id },  isCompleted: false,})
                                            .populate("user", "name");
 
         res.json(requests);
