@@ -80,11 +80,17 @@ export const deleteRequest = async (req, res) => {
 // ----------------------------
 // Get All Other Users’ Requests
 // ----------------------------
+// ----------------------------
+// Get All Other Users’ Requests
+// ----------------------------
 export const getOtherRequests = async (req, res) => {
     try {
         const requests = await BloodRequest.find({ 
             user: { $ne: req.user.id },  
-            isCompleted: false // ✅ only incomplete requests
+            $or: [
+                { isCompleted: false },           // incomplete requests
+                { isCompleted: { $exists: false } } // old requests without the field
+            ]
         }).populate("user", "name");
 
         res.json(requests);
