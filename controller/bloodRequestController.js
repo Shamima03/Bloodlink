@@ -80,14 +80,17 @@ export const deleteRequest = async (req, res) => {
 // Get All Other Users’ Requests
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
-    try {
-        const requests = await BloodRequest.find({ user: { $ne: req.user.id },  isCompleted: false,})
-                                           .populate("user", "name");
+  try {
+    const requests = await BloodRequest.find({
+      isCompleted: false   // ✅ ONLY hide completed
+    })
+    .populate("user", "name")
+    .sort({ createdAt: -1 });
 
-        res.json(requests);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // ----------------------------
