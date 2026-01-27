@@ -10,11 +10,11 @@ import userRouter from "./routes/user.route.js";
 import bloodRequestRoutes from './routes/bloodRequestRoute.js';
 import notificationRoute from "./routes/notificationRoute.js";
 
-app.use("/api/notifications", notificationRoute);
+
 
 const app = express();
 app.use(express.json());
-
+app.use("/api/notifications", notificationRoute);
 
 // ----- Environment -----
 const PORT = process.env.PORT || 8000;
