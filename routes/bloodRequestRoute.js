@@ -17,6 +17,6 @@ router.put("/:id", auth, updateRequest);
 router.delete("/:id", auth, deleteRequest);
 
 router.get("/others", auth, getOtherRequests);
-router.post("/interest/:id", auth, markInterest);
+// router.post("/interest/:id", auth, markInterest);
 
 export default router;
