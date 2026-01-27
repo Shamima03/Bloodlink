@@ -27,12 +27,20 @@ export const createRequest = async (req, res) => {
       user: req.user.id,
     });
 
-    // 2️⃣ Find donors in the same city (excluding request creator)
-    const donors = await User.find({
-      city: location, // ✅ match request location with user city
-      _id: { $ne: req.user.id },
-      expoPushToken: { $ne: null },
-    });
+// 1️⃣ Normalize location
+const normalizedLocation = location.trim();
+
+// 2️⃣ Find all users in the city with push tokens
+const donors = await User.find({
+  city: { $regex: new RegExp(`^${normalizedLocation}$`, "i") }, // case-insensitive match
+  expoPushToken: { $ne: null },
+});
+
+// 3️⃣ Exclude request creator in JS
+const donorsToNotify = donors.filter(user => user._id.toString() !== req.user.id);
+
+console.log("Users to notify:", donorsToNotify.map(u => u.name));
+
 
     if (donors.length > 0) {
       const expo = new Expo();
