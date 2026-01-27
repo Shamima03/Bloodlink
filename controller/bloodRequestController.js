@@ -11,11 +11,12 @@ export const createRequest = async (req, res) => {
   try {
     const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
 
+    // 1️⃣ Validate input
     if (!patientName || !bloodGroup || !hospital || !location || !units || !contact || !deadline) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // 1️⃣ Save blood request
+    // 2️⃣ Save blood request
     const newRequest = await BloodRequest.create({
       patientName,
       bloodGroup,
@@ -27,60 +28,61 @@ export const createRequest = async (req, res) => {
       user: req.user.id,
     });
 
- // 2️⃣ Find donors in the same city (excluding request creator)
-const normalizedLocation = location.trim();
+    // 3️⃣ Normalize city name
+    const normalizedLocation = location.trim();
 
-const donors = await User.find({
-  city: { $regex: new RegExp(`^${normalizedLocation}$`, "i") },
-  _id: { $ne: req.user.id },
-  expoPushToken: { $exists: true, $ne: "" }, // ensure token exists and is not empty
-});
-
-// Filter only valid Expo push tokens
-const validDonors = donors.filter(donor => Expo.isExpoPushToken(donor.expoPushToken));
-
-console.log("Users to notify:", validDonors.map(u => u.name));
-
-if (validDonors.length > 0) {
-  const expo = new Expo();
-  const messages = validDonors.map(donor => ({
-    to: donor.expoPushToken,
-    sound: "default",
-    title: "🩸 Urgent Blood Needed",
-    body: `${patientName} needs ${bloodGroup} blood at ${hospital} in ${normalizedLocation}`,
-
-    data: { requestId: newRequest._id },
-  }));
-
-  // Send push notifications in chunks
-  const chunks = expo.chunkPushNotifications(messages);
-  for (const chunk of chunks) {
-    try {
-      await expo.sendPushNotificationsAsync(chunk);
-    } catch (err) {
-      console.error("Push notification error:", err);
-    }
-  }
-
-  // Save notifications in DB
-  for (const donor of validDonors) {
-    await Notification.create({
-      toUser: donor._id,
-      fromUser: req.user.id,
-      message: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
+    // 4️⃣ Find donors in the same city (exclude creator)
+    const donors = await User.find({
+      city: { $regex: new RegExp(`^${normalizedLocation}$`, "i") }, // case-insensitive
+      _id: { $ne: req.user.id }, // exclude creator
+      expoPushToken: { $exists: true, $ne: null }, // token exists
     });
-  }
-}
 
+    // 5️⃣ Filter only valid Expo push tokens
+    const validDonors = donors.filter(donor => Expo.isExpoPushToken(donor.expoPushToken));
 
-    // 3️⃣ Respond to client
+    console.log("Users to notify:", validDonors.map(u => u.name));
+
+    // 6️⃣ Send push notifications
+    if (validDonors.length > 0) {
+      const expo = new Expo();
+
+      const messages = validDonors.map(donor => ({
+        to: donor.expoPushToken,
+        sound: "default",
+        title: "🩸 Urgent Blood Needed",
+        body: `${patientName} needs ${bloodGroup} blood at ${hospital} in ${normalizedLocation}`,
+        data: { requestId: newRequest._id },
+      }));
+
+      // Send in chunks
+      const chunks = expo.chunkPushNotifications(messages);
+      for (const chunk of chunks) {
+        try {
+          await expo.sendPushNotificationsAsync(chunk);
+        } catch (err) {
+          console.error("Push notification error:", err);
+        }
+      }
+
+      // 7️⃣ Save notifications in DB
+      for (const donor of validDonors) {
+        await Notification.create({
+          toUser: donor._id,
+          fromUser: req.user.id,
+          message: `${patientName} needs ${bloodGroup} blood at ${hospital} in ${normalizedLocation}`,
+        });
+      }
+    }
+
+    // 8️⃣ Respond to client
     res.status(201).json({ message: "Blood request created", request: newRequest });
+
   } catch (err) {
     console.error("Create request error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 // ----------------------------
 // Get My Requests
 // ----------------------------
