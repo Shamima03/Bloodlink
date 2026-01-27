@@ -6,7 +6,7 @@ import {
     updateRequest,
     deleteRequest,
     getOtherRequests,
-    markInterest
+
 } from "../controller/bloodRequestController.js";
 
 const router = express.Router();
