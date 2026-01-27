@@ -1,172 +1,121 @@
+// bloodRequestController.js
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
-import fetch from "node-fetch";
+import { Expo } from "expo-server-sdk";
 
-// ----------------------------
-// Create Blood Request
-// ----------------------------
+// Create a new blood request and notify users
 export const createRequest = async (req, res) => {
   try {
-    const data = { ...req.body, user: req.user.id };
-    const request = await BloodRequest.create(data);
+    const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
 
-    // 🔔 Notify donors in same city
-    const donors = await User.find({
-      city: request.city,
-      _id: { $ne: req.user.id },
-      expoPushToken: { $ne: null },
+    // 1️⃣ Save blood request
+    const newRequest = await BloodRequest.create({
+      patientName,
+      bloodGroup,
+      hospital,
+      location,
+      units,
+      contact,
+      deadline,
+      createdBy: req.user.id,
     });
 
-    const tokens = donors.map(u => u.expoPushToken);
+    // 2️⃣ Find users in same location (excluding request creator)
+    const usersToNotify = await User.find({
+     city: { $regex: new RegExp(`^${req.body.location}$`, "i") }, 
+      _id: { $ne: req.user.id },
+      expoPushToken: { $exists: true },
+    });
 
-    if (tokens.length > 0) {
-      await sendPushNotifications(tokens, request);
-    }
-    for (const donor of donors) {
-      await Notification.create({
-        toUser: donor._id,
-        fromUser: req.user.id,
-        message: `New blood request in ${request.city}`,
-      });
-    }
-    // ✅ Send response LAST
-    res.status(201).json({ message: "Request created", request });
+    if (usersToNotify.length > 0) {
+      const expo = new Expo();
+      const messages = [];
 
+      for (let user of usersToNotify) {
+        if (!Expo.isExpoPushToken(user.expoPushToken)) continue;
+
+        messages.push({
+          to: user.expoPushToken,
+          sound: "default",
+          title: "New Blood Request Nearby",
+          body: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
+          data: { requestId: newRequest._id },
+        });
+
+        // Save notification in DB
+        await Notification.create({
+          toUser: user._id,
+          fromUser: req.user.id,
+          message: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
+        });
+      }
+
+      // Send push notifications
+      const chunks = expo.chunkPushNotifications(messages);
+      for (let chunk of chunks) {
+        await expo.sendPushNotificationsAsync(chunk);
+      }
+    }
+
+    res.status(201).json(newRequest);
   } catch (err) {
-    console.error("Create request error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Create blood request error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-// ----------------------------
-// Get My Requests
-// ----------------------------
+// Fetch my requests
 export const getMyRequests = async (req, res) => {
-    try {
-        // const requests = await BloodRequest.find({ user: req.user.id });
-        const requests = await BloodRequest.find({ user: req.user.id }).sort({ createdAt: -1 });
-        res.json(requests);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const requests = await BloodRequest.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// ----------------------------
-// Edit My Request
-// ----------------------------
+// Fetch other requests (optional)
+export const getOtherRequests = async (req, res) => {
+  try {
+    const requests = await BloodRequest.find({ createdBy: { $ne: req.user.id } }).sort({ createdAt: -1 });
+    res.json(requests);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Update request
 export const updateRequest = async (req, res) => {
   try {
-    const request = await BloodRequest.findOne({
-      _id: req.params.id,
-      user: req.user.id,
-    });
-
-    if (!request)
-      return res.status(404).json({ message: "Request not found" });
-
-    // ❌ BLOCK EDIT IF COMPLETED (except isCompleted itself)
-    if (request.isCompleted && !("isCompleted" in req.body)) {
-      return res
-        .status(400)
-        .json({ message: "Completed requests cannot be edited" });
-    }
+    const request = await BloodRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.createdBy.toString() !== req.user.id)
+      return res.status(403).json({ message: "Unauthorized" });
 
     Object.assign(request, req.body);
     await request.save();
-
-    res.json({ message: "Request updated", request });
+    res.json(request);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-// ----------------------------
-// Delete My Request
-// ----------------------------
+// Delete request
 export const deleteRequest = async (req, res) => {
-    try {
-        const request = await BloodRequest.findOneAndDelete({
-            _id: req.params.id,
-            user: req.user.id
-        });
+  try {
+    const request = await BloodRequest.findById(req.params.id);
+    if (!request) return res.status(404).json({ message: "Request not found" });
+    if (request.createdBy.toString() !== req.user.id)
+      return res.status(403).json({ message: "Unauthorized" });
 
-        if (!request)
-            return res.status(404).json({ message: "Request not found or unauthorized" });
-
-        res.json({ message: "Deleted successfully" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
-
-// ----------------------------
-// Get All Other Users’ Requests
-// ----------------------------
-export const getOtherRequests = async (req, res) => {
-    try {
-        const requests = await BloodRequest.find({ 
-            user: { $ne: req.user.id },  
-            $or: [
-                { isCompleted: false },           // incomplete requests
-                { isCompleted: { $exists: false } } // old requests without the field
-            ]
-        }).populate("user", "name");
-
-        res.json(requests);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
-// ----------------------------
-// // Click Interest Icon
-// // ----------------------------
-// export const markInterest = async (req, res) => {
-//     try {
-//         const request = await BloodRequest.findById(req.params.id);
-
-//         if (!request)
-//             return res.status(404).json({ message: "Request not found" });
-
-//         if (String(request.user) === req.user.id)
-//             return res.status(400).json({ message: "You cannot show interest on your own post" });
-
-//         if (request.interests.includes(req.user.id))
-//             return res.status(400).json({ message: "You already showed interest" });
-
-//         request.interests.push(req.user.id);
-//         await request.save();
-
-//         // Create Notification
-//         await Notification.create({
-//             toUser: request.user,
-//             fromUser: req.user.id,
-//             message: `Someone shared interest on your blood request.`
-//         });
-
-//         res.json({ message: "Interest added", request });
-//     } catch (err) {
-//         res.status(500).json({ error: err.message });
-//     }
-// };
-const sendPushNotifications = async (tokens, request) => {
-  const messages = tokens.map(token => ({
-    to: token,
-    sound: "default",
-    title: "🩸 Urgent Blood Needed",
-    body: `Blood required in ${request.city}`,
-    data: { requestId: request._id }
-  }));
-
-  await fetch("https://exp.host/--/api/v2/push/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(messages),
-  });
+    await request.remove();
+    res.json({ message: "Request deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
