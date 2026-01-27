@@ -4,9 +4,6 @@ import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
 import { Expo } from "expo-server-sdk";
 
-// ----------------------------
-// Create Blood Request
-// ----------------------------
 export const createRequest = async (req, res) => {
   try {
     const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
@@ -27,26 +24,25 @@ export const createRequest = async (req, res) => {
       user: req.user.id,
     });
 
-// 1️⃣ Normalize location
-const normalizedLocation = location.trim();
+    // 2️⃣ Normalize location
+    const normalizedLocation = location.trim();
 
-// 2️⃣ Find all users in the city with push tokens
-const donors = await User.find({
-  city: { $regex: new RegExp(`^${normalizedLocation}$`, "i") }, // case-insensitive match
-  expoPushToken: { $ne: null },
-});
+    // 3️⃣ Find all users in the city with push tokens
+    const donors = await User.find({
+      city: { $regex: new RegExp(`^${normalizedLocation}$`, "i") },
+      expoPushToken: { $ne: null },
+    });
 
-// 3️⃣ Exclude request creator in JS
-const donorsToNotify = donors.filter(user => user._id.toString() !== req.user.id);
+    // 4️⃣ Exclude request creator
+    const donorsToNotify = donors.filter(user => user._id.toString() !== req.user.id);
 
-console.log("Users to notify:", donorsToNotify.map(u => u.name));
+    console.log("Users to notify:", donorsToNotify.map(u => u.name));
 
-
-    if (donors.length > 0) {
+    if (donorsToNotify.length > 0) {
       const expo = new Expo();
       const messages = [];
 
-      for (const donor of donors) {
+      for (const donor of donorsToNotify) {
         if (!Expo.isExpoPushToken(donor.expoPushToken)) continue;
 
         messages.push({
@@ -76,7 +72,7 @@ console.log("Users to notify:", donorsToNotify.map(u => u.name));
       }
     }
 
-    // 3️⃣ Respond to client
+    // 5️⃣ Respond to client
     res.status(201).json({ message: "Blood request created", request: newRequest });
   } catch (err) {
     console.error("Create request error:", err);
