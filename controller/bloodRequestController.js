@@ -29,7 +29,7 @@ export const createRequest = async (req, res) => {
 
     // 2️⃣ Find donors in the same city (excluding request creator)
     const donors = await User.find({
-      city: location, // ✅ match request location with user city
+      city: location, 
       _id: { $ne: req.user.id },
       expoPushToken: { $ne: null },
     });
@@ -46,7 +46,7 @@ export const createRequest = async (req, res) => {
           sound: "default",
           title: "🩸 Urgent Blood Needed",
           body: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
-          data: { requestId: newRequest._id },
+          data: { screen: "Home", requestId: newRequest._id },
         });
 
         // Save notification in DB
