@@ -7,7 +7,11 @@ import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 
 import userRouter from "./routes/user.route.js";
-import bloodRequestRoutes from './routes/bloodRequestRoute.js'
+import bloodRequestRoutes from './routes/bloodRequestRoute.js';
+import notificationRoute from "./routes/notificationRoute.js";
+
+app.use("/api/notifications", notificationRoute);
+
 const app = express();
 app.use(express.json());
 
