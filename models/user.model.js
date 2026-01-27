@@ -48,6 +48,10 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    pushToken: {
+  type: String,
+},
+
   },
   {
     timestamps: true,

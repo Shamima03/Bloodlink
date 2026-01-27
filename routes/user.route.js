@@ -15,5 +15,6 @@ router.get("/me", fetchLoginUser);
 router.put("/update", updateUser);
 router.get("/users", getAllUsers);
 router.delete("/delete", deleteUser);
+router.post("/save-token", savePushToken);
 
 export default router;

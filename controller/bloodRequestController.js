@@ -1,19 +1,61 @@
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
-
+import User from "../models/usermodel.js"; // ⭐ ADD THIS
+import fetch from "node-fetch"; 
 // ----------------------------
 // Create Blood Request
 // ----------------------------
 export const createRequest = async (req, res) => {
-    try {
-        const data = { ...req.body, user: req.user.id };
-        const request = await BloodRequest.create(data);
+  try {
+    const data = { ...req.body, user: req.user.id };
+    const request = await BloodRequest.create(data);
 
-        res.status(201).json({ message: "Request created", request });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    // 🔔 FIND USERS IN SAME CITY (case-insensitive) & exclude creator
+    const users = await User.find({
+      city: { $regex: new RegExp(`^${req.body.city}$`, "i") },
+      _id: { $ne: req.user.id },
+    });
+
+    // 📩 Build push messages
+    const messages = users
+      .filter(user => user.pushToken)
+      .map(user => ({
+        to: user.pushToken,
+        sound: "default",
+        title: "🩸 Emergency Blood Needed!",
+        body: `Urgent ${req.body.bloodGroup} blood required in ${req.body.city}. Can you help?`,
+        data: { requestId: request._id },
+      }));
+
+    // 🚀 Send notifications in chunks (Expo limit safe)
+    if (messages.length > 0) {
+      const chunkSize = 100;
+
+      for (let i = 0; i < messages.length; i += chunkSize) {
+        const chunk = messages.slice(i, i + chunkSize);
+
+        const response = await fetch("https://exp.host/--/api/v2/push/send", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(chunk),
+        });
+
+        const result = await response.json();
+        console.log("📬 Expo Push Response:", JSON.stringify(result, null, 2));
+      }
     }
+
+    res.status(201).json({ message: "Request created", request });
+
+  } catch (err) {
+    console.error("❌ Create Request Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
+
 
 // ----------------------------
 // Get My Requests
