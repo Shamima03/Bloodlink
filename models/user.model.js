@@ -48,8 +48,9 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    pushToken: {
+    expoPushToken: {
   type: String,
+  default: null
 },
 
   },

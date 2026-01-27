@@ -1,8 +1,8 @@
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
+import fetch from "node-fetch";
 
-import fetch from "node-fetch"; 
 // ----------------------------
 // Create Blood Request
 // ----------------------------
@@ -11,48 +11,24 @@ export const createRequest = async (req, res) => {
     const data = { ...req.body, user: req.user.id };
     const request = await BloodRequest.create(data);
 
-    // 🔔 FIND USERS IN SAME CITY (case-insensitive) & exclude creator
-    const users = await User.find({
-      city: { $regex: new RegExp(`^${req.body.city}$`, "i") },
+    // 🔔 Notify donors in same city
+    const donors = await User.find({
+      city: request.city,
       _id: { $ne: req.user.id },
+      expoPushToken: { $ne: null },
     });
 
-    // 📩 Build push messages
-    const messages = users
-      .filter(user => user.pushToken)
-      .map(user => ({
-        to: user.pushToken,
-        sound: "default",
-        title: "🩸 Emergency Blood Needed!",
-        body: `Urgent ${req.body.bloodGroup} blood required in ${req.body.city}. Can you help?`,
-        data: { requestId: request._id },
-      }));
+    const tokens = donors.map(u => u.expoPushToken);
 
-    // 🚀 Send notifications in chunks (Expo limit safe)
-    if (messages.length > 0) {
-      const chunkSize = 100;
-
-      for (let i = 0; i < messages.length; i += chunkSize) {
-        const chunk = messages.slice(i, i + chunkSize);
-
-        const response = await fetch("https://exp.host/--/api/v2/push/send", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(chunk),
-        });
-
-        const result = await response.json();
-        console.log("📬 Expo Push Response:", JSON.stringify(result, null, 2));
-      }
+    if (tokens.length > 0) {
+      await sendPushNotifications(tokens, request);
     }
 
+    // ✅ Send response LAST
     res.status(201).json({ message: "Request created", request });
 
   } catch (err) {
-    console.error("❌ Create Request Error:", err);
+    console.error("Create request error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -170,4 +146,21 @@ export const markInterest = async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+};
+const sendPushNotifications = async (tokens, request) => {
+  const messages = tokens.map(token => ({
+    to: token,
+    sound: "default",
+    title: "🩸 Urgent Blood Needed",
+    body: `Blood required in ${request.city}`,
+    data: { requestId: request._id }
+  }));
+
+  await fetch("https://exp.host/--/api/v2/push/send", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(messages),
+  });
 };
