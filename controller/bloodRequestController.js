@@ -1,6 +1,6 @@
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
-import User from "../models/usermodel.js"; // ⭐ ADD THIS
+import User from "../models/user.model.js"; // ⭐ ADD THIS
 import fetch from "node-fetch"; 
 // ----------------------------
 // Create Blood Request
