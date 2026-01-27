@@ -23,7 +23,13 @@ export const createRequest = async (req, res) => {
     if (tokens.length > 0) {
       await sendPushNotifications(tokens, request);
     }
-
+    for (const donor of donors) {
+      await Notification.create({
+        toUser: donor._id,
+        fromUser: req.user.id,
+        message: `New blood request in ${request.city}`,
+      });
+    }
     // ✅ Send response LAST
     res.status(201).json({ message: "Request created", request });
 
@@ -117,36 +123,36 @@ export const getOtherRequests = async (req, res) => {
 };
 
 // ----------------------------
-// Click Interest Icon
-// ----------------------------
-export const markInterest = async (req, res) => {
-    try {
-        const request = await BloodRequest.findById(req.params.id);
+// // Click Interest Icon
+// // ----------------------------
+// export const markInterest = async (req, res) => {
+//     try {
+//         const request = await BloodRequest.findById(req.params.id);
 
-        if (!request)
-            return res.status(404).json({ message: "Request not found" });
+//         if (!request)
+//             return res.status(404).json({ message: "Request not found" });
 
-        if (String(request.user) === req.user.id)
-            return res.status(400).json({ message: "You cannot show interest on your own post" });
+//         if (String(request.user) === req.user.id)
+//             return res.status(400).json({ message: "You cannot show interest on your own post" });
 
-        if (request.interests.includes(req.user.id))
-            return res.status(400).json({ message: "You already showed interest" });
+//         if (request.interests.includes(req.user.id))
+//             return res.status(400).json({ message: "You already showed interest" });
 
-        request.interests.push(req.user.id);
-        await request.save();
+//         request.interests.push(req.user.id);
+//         await request.save();
 
-        // Create Notification
-        await Notification.create({
-            toUser: request.user,
-            fromUser: req.user.id,
-            message: `Someone shared interest on your blood request.`
-        });
+//         // Create Notification
+//         await Notification.create({
+//             toUser: request.user,
+//             fromUser: req.user.id,
+//             message: `Someone shared interest on your blood request.`
+//         });
 
-        res.json({ message: "Interest added", request });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+//         res.json({ message: "Interest added", request });
+//     } catch (err) {
+//         res.status(500).json({ error: err.message });
+//     }
+// };
 const sendPushNotifications = async (tokens, request) => {
   const messages = tokens.map(token => ({
     to: token,
