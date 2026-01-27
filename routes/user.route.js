@@ -6,6 +6,7 @@ import {
   updateUser,
   getAllUsers,
   deleteUser,
+  savePushToken,
 } from "../controller/user.controller.js";
 const router = Router();
 
