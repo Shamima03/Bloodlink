@@ -52,7 +52,15 @@ const userSchema = new Schema(
   type: String,
   default: null
 },
-
+termsAccepted: {
+  type: Boolean,
+  required: true,
+  default: false,
+},
+termsAcceptedAt: {
+  type: Date,
+  default: null,
+},
   },
   {
     timestamps: true,
