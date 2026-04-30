@@ -70,11 +70,14 @@ const loginUser = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Incorrect password" });
     // ✅ UPDATE PUSH TOKEN ON LOGIN
-if (req.body.expoPushToken) {
-  user.expoPushToken = req.body.expoPushToken;
-  await user.save();
-}
-
+ // ✅ UPDATE PUSH TOKEN ON LOGIN
+    if (req.body.expoPushToken) {
+      user.expoPushToken = req.body.expoPushToken;
+      await user.save();
+      console.log("✅ Token saved:", req.body.expoPushToken); // ✅ add this
+    } else {
+      console.log("⚠️ No push token received on login"); // ✅ add this
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
