@@ -28,35 +28,33 @@ export const createRequest = async (req, res) => {
     });
 
     // 2️⃣ Find donors in the same city (excluding request creator)
-    const donors = await User.find({
-      city: location, 
-      _id: { $ne: req.user.id },
-      expoPushToken: { $ne: null },
-    });
-
+const donors = await User.find({
+  city: { $regex: new RegExp(`^${location}$`, "i") },  // ✅ case-insensitive
+  _id: { $ne: req.user.id },
+  expoPushToken: { $ne: null },
+});
     if (donors.length > 0) {
       const expo = new Expo();
       const messages = [];
 
-      for (const donor of donors) {
-        if (!Expo.isExpoPushToken(donor.expoPushToken)) continue;
+     for (const donor of donors) {
+  if (!Expo.isExpoPushToken(donor.expoPushToken)) continue;
 
-        messages.push({
-          to: donor.expoPushToken,
-          sound: "default",
-          title: "🩸 Urgent Blood Needed",
-          body: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
-          data: { screen: "Home", requestId: newRequest._id },
-        });
+  messages.push({
+    to: donor.expoPushToken,
+    sound: "default",
+    title: "🩸 Urgent Blood Needed in Your City!",
+    body: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
+    data: { screen: "Home", requestId: newRequest._id },
+  });
 
-        // Save notification in DB
-        await Notification.create({
-          toUser: donor._id,
-          fromUser: req.user.id,
-          message: `${patientName} needs ${bloodGroup} blood at ${hospital}`,
-        });
-      }
-
+  // Save notification in DB
+  await Notification.create({
+    toUser: donor._id,
+    fromUser: req.user.id,
+    message: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
+  });
+}
       // Send push notifications in chunks
       const chunks = expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
