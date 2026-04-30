@@ -8,6 +8,8 @@ import { Expo } from "expo-server-sdk";
 // Create Blood Request
 // ----------------------------
 export const createRequest = async (req, res) => {
+   console.log("🚀 createRequest called!");
+  console.log("📦 Body received:", req.body);
   try {
     const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
 
@@ -29,10 +31,13 @@ export const createRequest = async (req, res) => {
 
     // 2️⃣ Find donors in the same city (excluding request creator)
 const donors = await User.find({
-  city: { $regex: new RegExp(`^${location}$`, "i") },  // ✅ case-insensitive
+  city: { $regex: new RegExp(`^${location}$`, "i") },
   _id: { $ne: req.user.id },
   expoPushToken: { $ne: null },
 });
+console.log("📍 Location searched:", location);
+console.log("🔔 Donors found:", donors.length);
+donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
     if (donors.length > 0) {
       const expo = new Expo();
       const messages = [];
