@@ -13,7 +13,7 @@ export const createRequest = async (req, res) => {
   try {
     const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
 
-    if (!patientName || !bloodGroup || !hospital || !location || !units || !contact || !deadline) {
+   if (!patientName || !bloodGroup || !hospital || !location || !contact || !deadline){
       return res.status(400).json({ message: "All fields are required" });
     }
 
