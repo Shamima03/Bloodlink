@@ -3,7 +3,7 @@ import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
 import { Expo } from "expo-server-sdk";
-
+import mongoose from "mongoose"; 
 // ----------------------------
 // Create Blood Request
 // ----------------------------
@@ -32,7 +32,7 @@ export const createRequest = async (req, res) => {
     // 2️⃣ Find donors in the same city (excluding request creator)
 const donors = await User.find({
   city: { $regex: new RegExp(`^${location}$`, "i") },
-  _id: { $ne: req.user.id },
+  _id: { $ne: new mongoose.Types.ObjectId(req.user.id) }, // ✅ proper ObjectId
   expoPushToken: { $ne: null },
 });
 console.log("📍 Location searched:", location);
@@ -136,7 +136,16 @@ export const deleteRequest = async (req, res) => {
 // ----------------------------
 export const getOtherRequests = async (req, res) => {
   try {
-    const requests = await BloodRequest.find({ user: { $ne: req.user.id } }).populate("user", "name");
+    // Format today as YYYY-MM-DD string to match how deadline is stored
+    const today = new Date();
+    const todayStr = today.toLocaleDateString("en-CA"); // "2025-05-06"
+
+    const requests = await BloodRequest.find({
+      user: { $ne: req.user.id },
+      isCompleted: { $ne: true },       // ✅ hide completed
+      deadline: { $gte: todayStr },     // ✅ string comparison works correctly
+    }).populate("user", "name");
+
     res.json(requests);
   } catch (err) {
     console.error(err);
