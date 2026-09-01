@@ -54,29 +54,22 @@ const loginUser = async (req, res) => {
     }
 
     const { email, password } = req.body || {};
-    console.log("email", email);
+
     if (!email || !password)
       return res.status(400).json({ message: "Email and Password required" });
 
-    const user = await User.findOne({
-      email: email.toLowerCase(),
-    });
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    
 
     if (!isMatch)
       return res.status(400).json({ message: "Incorrect password" });
-    // ✅ UPDATE PUSH TOKEN ON LOGIN
- // ✅ UPDATE PUSH TOKEN ON LOGIN
+
     if (req.body.expoPushToken) {
       user.expoPushToken = req.body.expoPushToken;
       await user.save();
-      console.log("✅ Token saved:", req.body.expoPushToken); // ✅ add this
-    } else {
-      console.log("⚠️ No push token received on login"); // ✅ add this
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -84,12 +77,9 @@ const loginUser = async (req, res) => {
     });
 
     res.status(200).json({ message: "Login successful", token, user });
-
-    console.log("Login successful")
   } catch (error) {
-    console.log("Error", error);
-    res.status(500).json({ message: "Internal Server error ", error });
-    process.exit(1);
+    console.error("Login error:", error.message);
+    res.status(500).json({ message: "Internal server error" }); // no raw error, no process.exit
   }
 };
 
@@ -127,22 +117,13 @@ const fetchLoginUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
     if (!token) return res.status(401).json({ message: "No token provided" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const allowedUpdates = [
-      "name",
-      "age",
-      "email",
-      "gender",
-      "city",
-      "bloodGroup",
-    ];
+    const allowedUpdates = ["name", "age", "email", "gender", "city", "bloodGroup"];
     const updates = {};
 
-    // Only update allowed fields
     allowedUpdates.forEach((field) => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -152,7 +133,7 @@ const updateUser = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(
       decoded.id,
       updates,
-      { new: true } // return updated document
+      { new: true, runValidators: true, context: "query" } // ← the key fix
     ).select("-password");
 
     if (!updatedUser)
@@ -163,64 +144,78 @@ const updateUser = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error("Update Error:", error);
-    res
-      .status(500)
-      .json({ message: "Internal Server Error", error: error.message });
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+    console.error("Update Error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
+const maskContact = (contact) => {
+  if (!contact || contact.length < 10) return "Not available";
+  return contact.slice(0, 2) + "XXXXXX" + contact.slice(-2);
+};
 const getAllUsers = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
     if (!token) return res.status(401).json({ message: "No token provided" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const users = await User.find({
-      _id: { $ne: decoded.id }, // Exclude Logged-in User
-    }).select("-password");
+    const users = await User.find({ _id: { $ne: decoded.id } })
+      .select("-password -email -expoPushToken");
 
-    res.status(200).json({
-      message: "Users fetched successfully",
-      users,
-    });
+    const masked = users.map((u) => ({
+      _id: u._id,
+      name: u.name,
+      city: u.city,
+      bloodGroup: u.bloodGroup,
+      contact: maskContact(u.contact),
+    }));
+
+    res.status(200).json({ message: "Users fetched successfully", users: masked });
   } catch (error) {
-    console.error("Error fetching users:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
-    });
+    console.error("Error fetching users:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const revealContact = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "No token provided" });
+
+    jwt.verify(token, process.env.JWT_SECRET);
+
+    const donor = await User.findById(req.params.id).select("contact");
+    if (!donor) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ contact: donor.contact });
+  } catch (error) {
+    console.error("Reveal contact error:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const deleteUser = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
     if (!token) return res.status(401).json({ message: "No token provided" });
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Delete the logged-in user
     const deletedUser = await User.findByIdAndDelete(decoded.id);
+    if (!deletedUser) return res.status(404).json({ message: "User not found" });
 
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({
-      message: "User deleted successfully",
-      userId: deletedUser._id,
+    await BloodRequest.deleteMany({ user: decoded.id });
+    await Notification.deleteMany({
+      $or: [{ toUser: decoded.id }, { fromUser: decoded.id }],
     });
+
+    res.status(200).json({ message: "User and related data deleted successfully" });
   } catch (error) {
-    console.error("Delete Error:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    console.error("Delete Error:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -230,5 +225,6 @@ export {
   fetchLoginUser,
   updateUser,
   getAllUsers,
+  revealContact,
   deleteUser,
 };

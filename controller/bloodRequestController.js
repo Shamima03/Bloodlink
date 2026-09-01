@@ -4,6 +4,10 @@ import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
 import { Expo } from "expo-server-sdk";
 import mongoose from "mongoose"; 
+
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
 // ----------------------------
 // Create Blood Request
 // ----------------------------
@@ -31,7 +35,7 @@ export const createRequest = async (req, res) => {
 
     // 2️⃣ Find donors in the same city (excluding request creator)
 const donors = await User.find({
-  city: { $regex: new RegExp(`^${location}$`, "i") },
+  city: { $regex: new RegExp(`^${escapeRegex(location)}$`, "i") },
   _id: { $ne: new mongoose.Types.ObjectId(req.user.id) }, // ✅ proper ObjectId
   expoPushToken: { $ne: null },
 });
