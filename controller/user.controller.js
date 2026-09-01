@@ -1,7 +1,8 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
+import BloodRequest from "../models/BloodRequest.js";
+import Notification from "../models/Notification.js";
 const registerUser = async (req, res) => {
   try {
     const { name, password, email, age, gender, bloodGroup, city, contact, expoPushToken, termsAccepted } = req.body;
