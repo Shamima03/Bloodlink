@@ -40,7 +40,7 @@ const registerUser = async (req, res) => {
       loggedIn: false,
     });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "30d" });
     res.status(201).json({ message: "Registered Successfully", token, user: { user } });
     console.log("Registered Successfully");
   } catch (error) {
