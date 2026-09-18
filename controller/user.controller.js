@@ -7,15 +7,25 @@ const registerUser = async (req, res) => {
   try {
     const { name, password, email, age, gender, bloodGroup, city, contact, expoPushToken, termsAccepted } = req.body;
     
-    // Basic validation
-    if (!name || !email || !password || !age || !gender || !bloodGroup || !city || !contact) {
-      return res.status(400).json({ message: "All fields are important!" });
-    }
+  if (!name || !email || !password || !age || !gender || !bloodGroup || !city || !contact) {
+  return res.status(400).json({ message: "All fields are important!" });
+}
 
-    // ✅ CHECK IF TERMS ACCEPTED
-    if (!termsAccepted) {
-      return res.status(400).json({ message: "You must accept the terms and conditions" });
-    }
+if (Number(age) < 18 || Number(age) > 50) {
+  return res.status(400).json({ message: "Age must be between 18 and 50" });
+}
+
+if (password.length < 6) {
+  return res.status(400).json({ message: "Password must be at least 6 characters" });
+}
+
+if (name.trim().length < 1 || name.trim().length > 30) {
+  return res.status(400).json({ message: "Name must be between 1 and 30 characters" });
+}
+
+if (!termsAccepted) {
+  return res.status(400).json({ message: "You must accept the terms and conditions" });
+}
 
     // Check if user exists already
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -44,9 +54,19 @@ const registerUser = async (req, res) => {
     res.status(201).json({ message: "Registered Successfully", token, user: { user } });
     console.log("Registered Successfully");
   } catch (error) {
-    console.error("", error);
-    res.status(500).json({ message: "internal server error", error: error.message });
+  if (error.name === "ValidationError") {
+    const firstError = Object.values(error.errors)[0]?.message || "Invalid input";
+    return res.status(400).json({ message: firstError });
   }
+
+  if (error.code === 11000) {
+    const field = Object.keys(error.keyPattern)[0];
+    return res.status(400).json({ message: `This ${field} is already registered` });
+  }
+
+  console.error("Register error:", error.message);
+  res.status(500).json({ message: "Internal server error" });
+}
 };
 const loginUser = async (req, res) => {
   try {

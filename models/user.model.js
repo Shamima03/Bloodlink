@@ -32,7 +32,7 @@ const userSchema = new Schema(
       type: Number,
       required: true,
       min: 18,
-      max: 70,
+      max: 50,
     },
     gender: {
       type: String,
