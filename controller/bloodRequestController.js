@@ -64,14 +64,14 @@ donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
     message: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
   });
 }
-      // Send push notifications in chunks
-     const chunks = expo.chunkPushNotifications(messages);
-      for (const chunk of chunks) {
+      // Send each message separately because old app versions may belong to a
+      // different Expo project and Expo rejects mixed-project batches.
+      for (const message of messages) {
         try {
-          const tickets = await expo.sendPushNotificationsAsync(chunk);
+          const tickets = await expo.sendPushNotificationsAsync([message]);
           console.log("📬 Push tickets:", JSON.stringify(tickets));
         } catch (err) {
-          console.error("Push notification error:", err);
+          console.error(`Push notification error for ${message.to}:`, err);
         }
       }
     }
