@@ -172,6 +172,27 @@ const updateUser = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+const updatePushToken = async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+    if (!expoPushToken) {
+      return res.status(400).json({ message: "expoPushToken is required" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { expoPushToken },
+      { new: true }
+    ).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ message: "Push token updated", user });
+  } catch (error) {
+    console.error("Push token update error:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 const maskContact = (contact) => {
   if (!contact || contact.length < 10) return "Not available";
   return contact.slice(0, 2) + "XXXXXX" + contact.slice(-2);
@@ -245,6 +266,7 @@ export {
   loginUser,
   fetchLoginUser,
   updateUser,
+  updatePushToken,
   getAllUsers,
   revealContact,
   deleteUser,

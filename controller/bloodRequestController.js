@@ -68,8 +68,8 @@ donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
      const chunks = expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
         try {
-          const receipts = await expo.sendPushNotificationsAsync(chunk);
-          console.log("📬 Push receipts:", JSON.stringify(receipts)); // ✅ add this
+          const tickets = await expo.sendPushNotificationsAsync(chunk);
+          console.log("📬 Push tickets:", JSON.stringify(tickets));
         } catch (err) {
           console.error("Push notification error:", err);
         }
