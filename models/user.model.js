@@ -49,22 +49,37 @@ const userSchema = new Schema(
       required: true,
     },
     expoPushToken: {
-  type: String,
-  default: null
-},
-termsAccepted: {
-  type: Boolean,
-  required: true,
-  default: false,
-},
-termsAcceptedAt: {
-  type: Date,
-  default: null,
-},
+      type: String,
+      default: null,
+    },
+    termsAccepted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    termsAcceptedAt: {
+      type: Date,
+      default: null,
+    },
+    resetCode: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    resetCodeExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    resetAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const User = mongoose.model("User", userSchema);

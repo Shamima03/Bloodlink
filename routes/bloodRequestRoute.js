@@ -1,12 +1,11 @@
 import express from "express";
 import auth from "../middleware/auth.js";
 import {
-    createRequest,
-    getMyRequests,
-    updateRequest,
-    deleteRequest,
-    getOtherRequests,
-
+  createRequest,
+  getMyRequests,
+  updateRequest,
+  deleteRequest,
+  getOtherRequests,
 } from "../controller/bloodRequestController.js";
 
 const router = express.Router();
@@ -17,6 +16,5 @@ router.put("/:id", auth, updateRequest);
 router.delete("/:id", auth, deleteRequest);
 
 router.get("/others", auth, getOtherRequests);
-// router.post("/interest/:id", auth, markInterest);
 
 export default router;

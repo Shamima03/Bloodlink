@@ -5,12 +5,11 @@ import { User } from "../models/user.model.js";
 
 const router = express.Router();
 
-// GET all notifications for the logged-in user
 router.get("/", auth, async (req, res) => {
   try {
     const notifications = await Notification.find({ toUser: req.user.id })
       .sort({ createdAt: -1 })
-      .populate("fromUser", "name"); // show sender's name
+      .populate("fromUser", "name"); 
 
     res.json(notifications);
   } catch (err) {

@@ -21,7 +21,7 @@ const bloodRequestSchema = new mongoose.Schema(
     // Users who clicked interest icon
     interests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("BloodRequest", bloodRequestSchema);

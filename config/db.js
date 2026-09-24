@@ -7,12 +7,12 @@ const connectDB = async () => {
     process.exit(1);
   }
   try {
-  await mongoose.connect(mongoUri, {
-    autoIndex: true,
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-  });
+    await mongoose.connect(mongoUri, {
+      autoIndex: true,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
 
     console.log("✅ MongoDB connected");
   } catch (error) {

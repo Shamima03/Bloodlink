@@ -1,9 +1,8 @@
-// bloodRequestController.js
 import BloodRequest from "../models/BloodRequest.js";
 import Notification from "../models/Notification.js";
 import { User } from "../models/user.model.js";
 import { Expo } from "expo-server-sdk";
-import mongoose from "mongoose"; 
+import mongoose from "mongoose";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -12,12 +11,27 @@ const escapeRegex = (string) => {
 // Create Blood Request
 // ----------------------------
 export const createRequest = async (req, res) => {
-   console.log("🚀 createRequest called!");
+  console.log("🚀 createRequest called!");
   console.log("📦 Body received:", req.body);
   try {
-    const { patientName, bloodGroup, hospital, location, units, contact, deadline } = req.body;
+    const {
+      patientName,
+      bloodGroup,
+      hospital,
+      location,
+      units,
+      contact,
+      deadline,
+    } = req.body;
 
-   if (!patientName || !bloodGroup || !hospital || !location || !contact || !deadline){
+    if (
+      !patientName ||
+      !bloodGroup ||
+      !hospital ||
+      !location ||
+      !contact ||
+      !deadline
+    ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -34,36 +48,36 @@ export const createRequest = async (req, res) => {
     });
 
     // 2️⃣ Find donors in the same city (excluding request creator)
-const donors = await User.find({
-  city: { $regex: new RegExp(`^${escapeRegex(location)}$`, "i") },
-  _id: { $ne: new mongoose.Types.ObjectId(req.user.id) }, // ✅ proper ObjectId
-  expoPushToken: { $ne: null },
-});
-console.log("📍 Location searched:", location);
-console.log("🔔 Donors found:", donors.length);
-donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
+    const donors = await User.find({
+      city: { $regex: new RegExp(`^${escapeRegex(location)}$`, "i") },
+      _id: { $ne: new mongoose.Types.ObjectId(req.user.id) }, // ✅ proper ObjectId
+      expoPushToken: { $ne: null },
+    });
+    console.log("📍 Location searched:", location);
+    console.log("🔔 Donors found:", donors.length);
+    donors.forEach((d) => console.log("📱 Donor token:", d.expoPushToken));
     if (donors.length > 0) {
       const expo = new Expo();
       const messages = [];
 
-     for (const donor of donors) {
-  if (!Expo.isExpoPushToken(donor.expoPushToken)) continue;
+      for (const donor of donors) {
+        if (!Expo.isExpoPushToken(donor.expoPushToken)) continue;
 
-  messages.push({
-    to: donor.expoPushToken,
-    sound: "default",
-    title: "🩸 Urgent Blood Needed in Your City!",
-    body: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
-    data: { screen: "Home", requestId: newRequest._id },
-  });
+        messages.push({
+          to: donor.expoPushToken,
+          sound: "default",
+          title: "🩸 Urgent Blood Needed in Your City!",
+          body: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
+          data: { screen: "Home", requestId: newRequest._id },
+        });
 
-  // Save notification in DB
-  await Notification.create({
-    toUser: donor._id,
-    fromUser: req.user.id,
-    message: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
-  });
-}
+        // Save notification in DB
+        await Notification.create({
+          toUser: donor._id,
+          fromUser: req.user.id,
+          message: `${patientName} urgently needs ${bloodGroup} blood at ${hospital}. Donate or share with someone who can help!`,
+        });
+      }
       // Send each message separately because old app versions may belong to a
       // different Expo project and Expo rejects mixed-project batches.
       for (const message of messages) {
@@ -77,7 +91,9 @@ donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
     }
 
     // 3️⃣ Respond to client
-    res.status(201).json({ message: "Blood request created", request: newRequest });
+    res
+      .status(201)
+      .json({ message: "Blood request created", request: newRequest });
   } catch (err) {
     console.error("Create request error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
@@ -89,7 +105,9 @@ donors.forEach(d => console.log("📱 Donor token:", d.expoPushToken));
 // ----------------------------
 export const getMyRequests = async (req, res) => {
   try {
-    const requests = await BloodRequest.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const requests = await BloodRequest.find({ user: req.user.id }).sort({
+      createdAt: -1,
+    });
     res.json(requests);
   } catch (err) {
     console.error(err);
@@ -102,12 +120,17 @@ export const getMyRequests = async (req, res) => {
 // ----------------------------
 export const updateRequest = async (req, res) => {
   try {
-    const request = await BloodRequest.findOne({ _id: req.params.id, user: req.user.id });
+    const request = await BloodRequest.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
     if (!request) return res.status(404).json({ message: "Request not found" });
 
     // Prevent editing if completed (except isCompleted itself)
     if (request.isCompleted && !("isCompleted" in req.body)) {
-      return res.status(400).json({ message: "Completed requests cannot be edited" });
+      return res
+        .status(400)
+        .json({ message: "Completed requests cannot be edited" });
     }
 
     Object.assign(request, req.body);
@@ -125,8 +148,14 @@ export const updateRequest = async (req, res) => {
 // ----------------------------
 export const deleteRequest = async (req, res) => {
   try {
-    const request = await BloodRequest.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-    if (!request) return res.status(404).json({ message: "Request not found or unauthorized" });
+    const request = await BloodRequest.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+    if (!request)
+      return res
+        .status(404)
+        .json({ message: "Request not found or unauthorized" });
 
     res.json({ message: "Request deleted successfully" });
   } catch (err) {
@@ -146,8 +175,8 @@ export const getOtherRequests = async (req, res) => {
 
     const requests = await BloodRequest.find({
       user: { $ne: req.user.id },
-      isCompleted: { $ne: true },       // ✅ hide completed
-      deadline: { $gte: todayStr },     // ✅ string comparison works correctly
+      isCompleted: { $ne: true },
+      deadline: { $gte: todayStr },
     }).populate("user", "name");
 
     res.json(requests);
