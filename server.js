@@ -2,11 +2,17 @@ import "dotenv/config";   // must be the FIRST import
 
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectDB, { pool } from "./config/db.js";
 
 import userRouter from "./routes/user.route.js";
 import bloodRequestRoutes from "./routes/bloodRequestRoute.js";
 import notificationRoute from "./routes/notificationRoute.js";
+
+// __dirname is not available in ES modules, so create it
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -15,6 +21,9 @@ const PORT = process.env.PORT || 8000;
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// ----- Serve the public folder (privacy.html etc.) -----
+app.use(express.static(path.join(__dirname, "public")));
 
 // ----- Debug logger -----
 app.use((req, res, next) => {
@@ -26,6 +35,10 @@ app.use((req, res, next) => {
 connectDB();
 
 // ----- Routes -----
+app.get("/privacy", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "privacy.html"));
+});
+
 app.get("/health", async (req, res) => {
   let dbStatus = "disconnected";
   try {
