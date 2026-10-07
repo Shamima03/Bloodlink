@@ -9,6 +9,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 5,
   connectTimeout: 10000,
+  timezone: "Z", 
 });
 
 const connectDB = async () => {
